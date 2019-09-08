@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 public class ProductService {
 
@@ -20,5 +22,10 @@ public class ProductService {
     @Transactional
     public int decreaseProductStock(Long productId) {
         return productDao.decreaseProductStock(productId);
+    }
+
+    @Transactional
+    public List<Product> getAllProduct() {
+        return productDao.selectAllProducts();
     }
 }
