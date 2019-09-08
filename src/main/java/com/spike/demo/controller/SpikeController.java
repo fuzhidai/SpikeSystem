@@ -3,6 +3,7 @@ package com.spike.demo.controller;
 import com.spike.demo.global.Constants;
 import com.spike.demo.model.Order;
 import com.spike.demo.model.Product;
+import com.spike.demo.mq.Producer;
 import com.spike.demo.service.OrderService;
 import com.spike.demo.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,8 @@ public class SpikeController {
     private ProductService productService;
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
+    @Autowired
+    private Producer producer;
     // 售罄商品列表
     private ConcurrentHashMap<Long, Boolean> productSoldOutMap = new ConcurrentHashMap<>();
     
@@ -55,7 +58,12 @@ public class SpikeController {
                 return "fail";
             }
 
-            orderService.spike(productId);
+            // 数据库中减库存
+            // orderService.spike(productId);
+
+            // 数据库异步减库存
+            producer.spike(productId);
+
         } catch (Exception e){
             // 数据库减库存失败回滚已售罄列表记录
             productSoldOutMap.remove(productId);
