@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.PostConstruct;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/spike")
@@ -25,6 +26,8 @@ public class SpikeController {
     private ProductService productService;
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
+    // 售罄商品列表
+    private ConcurrentHashMap<Long, Boolean> productSoldOutMap = new ConcurrentHashMap<>();
     
     @PostConstruct
     public void initRedis() {
@@ -38,15 +41,24 @@ public class SpikeController {
     @PostMapping("/{productId}")
     public String spike(@PathVariable("productId") Long productId) {
 
+        if (productSoldOutMap.get(productId) != null){
+            return "fail";
+        }
+
         try {
             Long stock = stringRedisTemplate.opsForValue().decrement(Constants.PRODUCT_STOCK_PREFIX + productId);
             if (stock < 0) {
+                // 商品销售完后将其加入到售罄列表记录中
+                productSoldOutMap.put(productId, true);
                 // 保证 Redis 当中的商品库存恒为非负数
                 stringRedisTemplate.opsForValue().increment(Constants.PRODUCT_STOCK_PREFIX + productId);
-                throw new RuntimeException("The product has been sold out.");
+                return "fail";
             }
+
             orderService.spike(productId);
         } catch (Exception e){
+            // 数据库减库存失败回滚已售罄列表记录
+            productSoldOutMap.remove(productId);
             // 回滚 Redis 中的库存
             stringRedisTemplate.opsForValue().increment(Constants.PRODUCT_STOCK_PREFIX + productId);
             return "fail";
