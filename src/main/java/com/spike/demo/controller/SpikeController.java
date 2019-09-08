@@ -66,7 +66,9 @@ public class SpikeController {
 
         } catch (Exception e){
             // 数据库减库存失败回滚已售罄列表记录
-            productSoldOutMap.remove(productId);
+            if (productSoldOutMap.get(productId) != null) {
+                productSoldOutMap.remove(productId);
+            }
             // 回滚 Redis 中的库存
             stringRedisTemplate.opsForValue().increment(Constants.PRODUCT_STOCK_PREFIX + productId);
             return "fail";
